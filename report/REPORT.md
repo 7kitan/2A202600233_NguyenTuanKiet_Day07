@@ -211,9 +211,9 @@ Chạy 5 benchmark queries của nhóm trên implementation cá nhân của bạ
 | 2 | GPA bao nhiêu thì được làm luận văn tốt nghiệp?  | Sinh viên có GPA tích lũy từ 2.8 trở lên được đăng ký làm luận văn... | 0.388 | Yes | Sinh viên có GPA tích lũy từ 2.8 trở lên được đăng ký làm luận văn tốt nghiệp |
 | 3 | Những đối tượng nào được miễn giảm học phí?  | ## Miễn giảm học phí... | 0.627 | No (header) | sinh viên thuộc hộ nghèo, hộ cận nghèo, sinh viên là người dân tộc thiểu số... (chunk top 2) |
 | 4 | Khi nào sinh viên bị cảnh cáo học vụ? | Dịch vụ hỗ trợ sinh viên... | 0.019 | No |# Dịch vụ hỗ trợ sinh viên... (relevant chunk is no.3) |
-| 5 | Chuẩn đầu ra ngoại ngữ để tốt nghiệp là gì? | | | | |
+| 5 | Chuẩn đầu ra ngoại ngữ để tốt nghiệp là gì? | ## Chuẩn đầu ra ngoại ngữ | 0.125 | No (header) |Sinh viên được xét tốt nghiệp khi ... (irrelevant) |
 
-**Bao nhiêu queries trả về chunk relevant trong top-3?** 5 / 5
+**Bao nhiêu queries trả về chunk relevant trong top-3?** 4 / 5
 
 ---
 
