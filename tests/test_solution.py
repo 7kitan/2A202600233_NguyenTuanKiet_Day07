@@ -18,15 +18,15 @@ PACKAGE_NAME = os.getenv("LAB_SOLUTION_PACKAGE", "src")
 
 _m = importlib.import_module(PACKAGE_NAME)
 
-Document = getattr(_m, 'Document')
-EmbeddingStore = getattr(_m, 'EmbeddingStore')
-KnowledgeBaseAgent = getattr(_m, 'KnowledgeBaseAgent')
-_mock_embed = getattr(_m, '_mock_embed')
-FixedSizeChunker = getattr(_m, 'FixedSizeChunker')
-SentenceChunker = getattr(_m, 'SentenceChunker')
-RecursiveChunker = getattr(_m, 'RecursiveChunker')
-ChunkingStrategyComparator = getattr(_m, 'ChunkingStrategyComparator')
-MockEmbedder = getattr(_m, 'MockEmbedder')
+Document = getattr(_m, "Document")
+EmbeddingStore = getattr(_m, "EmbeddingStore")
+KnowledgeBaseAgent = getattr(_m, "KnowledgeBaseAgent")
+_mock_embed = getattr(_m, "_mock_embed")
+FixedSizeChunker = getattr(_m, "FixedSizeChunker")
+SentenceChunker = getattr(_m, "SentenceChunker")
+RecursiveChunker = getattr(_m, "RecursiveChunker")
+ChunkingStrategyComparator = getattr(_m, "ChunkingStrategyComparator")
+MockEmbedder = getattr(_m, "MockEmbedder")
 template = _m
 
 SAMPLE_TEXT = (
@@ -41,18 +41,25 @@ LONG_TEXT = "word " * 200
 
 
 class TestProjectStructure(unittest.TestCase):
-
     def test_root_main_entrypoint_exists(self):
-        self.assertTrue((DAY_DIR / 'main.py').exists())
+        self.assertTrue((DAY_DIR / "main.py").exists())
 
     def test_src_package_exists(self):
-        self.assertTrue((DAY_DIR / 'src' / '__init__.py').exists())
+        self.assertTrue((DAY_DIR / "src" / "__init__.py").exists())
 
 
 class TestClassBasedInterfaces(unittest.TestCase):
-
     def test_chunker_classes_exist(self):
-        self.assertTrue(all([FixedSizeChunker, SentenceChunker, RecursiveChunker, ChunkingStrategyComparator]))
+        self.assertTrue(
+            all(
+                [
+                    FixedSizeChunker,
+                    SentenceChunker,
+                    RecursiveChunker,
+                    ChunkingStrategyComparator,
+                ]
+            )
+        )
 
     def test_mock_embedder_exists(self):
         embedder = MockEmbedder()
@@ -60,7 +67,6 @@ class TestClassBasedInterfaces(unittest.TestCase):
 
 
 class TestFixedSizeChunker(unittest.TestCase):
-
     def test_returns_list(self):
         chunks = FixedSizeChunker(chunk_size=50, overlap=0).chunk(SAMPLE_TEXT)
         self.assertIsInstance(chunks, list)
@@ -101,7 +107,6 @@ class TestFixedSizeChunker(unittest.TestCase):
 
 
 class TestSentenceChunker(unittest.TestCase):
-
     def test_returns_list(self):
         chunks = SentenceChunker(max_sentences_per_chunk=2).chunk(SAMPLE_TEXT)
         self.assertIsInstance(chunks, list)
@@ -122,7 +127,6 @@ class TestSentenceChunker(unittest.TestCase):
 
 
 class TestRecursiveChunker(unittest.TestCase):
-
     def test_returns_list(self):
         chunks = RecursiveChunker(chunk_size=100).chunk(SAMPLE_TEXT)
         self.assertIsInstance(chunks, list)
@@ -145,13 +149,16 @@ class TestRecursiveChunker(unittest.TestCase):
 
 
 class TestEmbeddingStore(unittest.TestCase):
-
     def _make_store(self) -> EmbeddingStore:
         return EmbeddingStore(collection_name="test", embedding_fn=_mock_embed)
 
     def _make_docs(self, n: int = 3) -> list[Document]:
         return [
-            Document(id=f"doc{i}", content=f"This is document number {i}.", metadata={})
+            Document(
+                id=f"doc{i}",
+                content=f"This is document number {i}.",
+                metadata={},
+            )
             for i in range(n)
         ]
 
@@ -206,16 +213,29 @@ class TestEmbeddingStore(unittest.TestCase):
 
 
 class TestKnowledgeBaseAgent(unittest.TestCase):
-
     def _make_agent(self) -> KnowledgeBaseAgent:
         store = EmbeddingStore(collection_name="kb_test", embedding_fn=_mock_embed)
         docs = [
-            Document(id="d1", content="Python is a high-level programming language.", metadata={}),
-            Document(id="d2", content="Machine learning uses algorithms to learn from data.", metadata={}),
-            Document(id="d3", content="Vector databases store embeddings for similarity search.", metadata={}),
+            Document(
+                id="d1",
+                content="Python is a high-level programming language.",
+                metadata={},
+            ),
+            Document(
+                id="d2",
+                content="Machine learning uses algorithms to learn from data.",
+                metadata={},
+            ),
+            Document(
+                id="d3",
+                content="Vector databases store embeddings for similarity search.",
+                metadata={},
+            ),
         ]
         store.add_documents(docs)
-        return KnowledgeBaseAgent(store=store, llm_fn=lambda prompt: "Answer based on context.")
+        return KnowledgeBaseAgent(
+            store=store, llm_fn=lambda prompt: "Answer based on context."
+        )
 
     def test_answer_returns_string(self):
         agent = self._make_agent()
@@ -260,55 +280,75 @@ class TestCompareChunkingStrategies(unittest.TestCase):
 
     def test_returns_three_strategies(self):
         result = ChunkingStrategyComparator().compare(self.SAMPLE_TEXT, chunk_size=100)
-        self.assertIn('fixed_size', result)
-        self.assertIn('by_sentences', result)
-        self.assertIn('recursive', result)
+        self.assertIn("fixed_size", result)
+        self.assertIn("by_sentences", result)
+        self.assertIn("recursive", result)
 
     def test_each_strategy_has_count_and_avg_length(self):
         result = ChunkingStrategyComparator().compare(self.SAMPLE_TEXT, chunk_size=100)
         for strategy_name, stats in result.items():
-            self.assertIn('count', stats)
-            self.assertIn('avg_length', stats)
-            self.assertIn('chunks', stats)
+            self.assertIn("count", stats)
+            self.assertIn("avg_length", stats)
+            self.assertIn("chunks", stats)
 
     def test_counts_are_positive(self):
         result = ChunkingStrategyComparator().compare(self.SAMPLE_TEXT, chunk_size=100)
         for strategy_name, stats in result.items():
-            self.assertGreater(stats['count'], 0)
+            self.assertGreater(stats["count"], 0)
 
 
 class TestEmbeddingStoreSearchWithFilter(unittest.TestCase):
     def setUp(self):
         self.store = template.EmbeddingStore("test_filter")
         docs = [
-            template.Document("doc1", "Python programming tutorial", {"department": "engineering", "lang": "en"}),
-            template.Document("doc2", "Marketing strategy guide", {"department": "marketing", "lang": "en"}),
-            template.Document("doc3", "Kỹ thuật lập trình Python", {"department": "engineering", "lang": "vi"}),
+            template.Document(
+                "doc1",
+                "Python programming tutorial",
+                {"department": "engineering", "lang": "en"},
+            ),
+            template.Document(
+                "doc2",
+                "Marketing strategy guide",
+                {"department": "marketing", "lang": "en"},
+            ),
+            template.Document(
+                "doc3",
+                "Kỹ thuật lập trình Python",
+                {"department": "engineering", "lang": "vi"},
+            ),
         ]
         self.store.add_documents(docs)
 
     def test_filter_by_department(self):
-        results = self.store.search_with_filter("programming", top_k=5, metadata_filter={"department": "engineering"})
+        results = self.store.search_with_filter(
+            "programming", top_k=5, metadata_filter={"department": "engineering"}
+        )
         for r in results:
-            self.assertEqual(r['metadata']['department'], 'engineering')
+            self.assertEqual(r["metadata"]["department"], "engineering")
 
     def test_no_filter_returns_all_candidates(self):
-        results_filtered = self.store.search_with_filter("programming", top_k=10, metadata_filter=None)
+        results_filtered = self.store.search_with_filter(
+            "programming", top_k=10, metadata_filter=None
+        )
         results_unfiltered = self.store.search("programming", top_k=10)
         self.assertEqual(len(results_filtered), len(results_unfiltered))
 
     def test_returns_at_most_top_k(self):
-        results = self.store.search_with_filter("programming", top_k=1, metadata_filter={"department": "engineering"})
+        results = self.store.search_with_filter(
+            "programming", top_k=1, metadata_filter={"department": "engineering"}
+        )
         self.assertLessEqual(len(results), 1)
 
 
 class TestEmbeddingStoreDeleteDocument(unittest.TestCase):
     def setUp(self):
         self.store = template.EmbeddingStore("test_delete")
-        self.store.add_documents([
-            template.Document("doc_to_delete", "Content that will be removed", {}),
-            template.Document("doc_to_keep", "Content that stays", {}),
-        ])
+        self.store.add_documents(
+            [
+                template.Document("doc_to_delete", "Content that will be removed", {}),
+                template.Document("doc_to_keep", "Content that stays", {}),
+            ]
+        )
 
     def test_delete_returns_true_for_existing_doc(self):
         result = self.store.delete_document("doc_to_delete")

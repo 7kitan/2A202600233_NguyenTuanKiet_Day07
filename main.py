@@ -7,6 +7,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 from src.agent import KnowledgeBaseAgent
+from src.chunking import RecursiveChunker
 from src.embeddings import (
     EMBEDDING_PROVIDER_ENV,
     LOCAL_EMBEDDING_MODEL,
@@ -18,13 +19,21 @@ from src.embeddings import (
 from src.models import Document
 from src.store import EmbeddingStore
 
+# SAMPLE_FILES = [
+#     "data/python_intro.txt",
+#     "data/vector_store_notes.md",
+#     "data/rag_system_design.md",
+#     "data/customer_support_playbook.txt",
+#     "data/chunking_experiment_report.md",
+#     "data/vi_retrieval_notes.md",
+# ]
 SAMPLE_FILES = [
-    "data/python_intro.txt",
-    "data/vector_store_notes.md",
-    "data/rag_system_design.md",
-    "data/customer_support_playbook.txt",
-    "data/chunking_experiment_report.md",
-    "data/vi_retrieval_notes.md",
+    "data_v2/dang_ky_hoc_phan.md",
+    "data_v2/diem_va_xep_loai.md",
+    "data_v2/ho_tro_sinh_vien.md",
+    "data_v2/hoc_phi_hoc_bong.md",
+    "data_v2/ky_luat_chuyen_can.md",
+    "data_v2/tot_nghiep.md",
 ]
 
 
@@ -62,7 +71,9 @@ def demo_llm(prompt: str) -> str:
     return f"[DEMO LLM] Generated answer from prompt preview: {preview}..."
 
 
-def run_manual_demo(question: str | None = None, sample_files: list[str] | None = None) -> int:
+def run_manual_demo(
+    question: str | None = None, sample_files: list[str] | None = None
+) -> int:
     files = sample_files or SAMPLE_FILES
     query = question or "Summarize the key information from the loaded files."
 
@@ -73,6 +84,27 @@ def run_manual_demo(question: str | None = None, sample_files: list[str] | None 
         print(f"  - {file_path}")
 
     docs = load_documents_from_files(files)
+
+    chunker = RecursiveChunker(separators=["\n\n", "\n", " ", ""], chunk_size=500)
+
+    chunked_docs = []
+
+    for doc in docs:
+        chunks = chunker.chunk(doc.content)
+
+        for i, chunk in enumerate(chunks):
+            chunked_docs.append(
+                Document(
+                    id=f"{doc.id}_{i}",
+                    content=chunk,
+                    metadata={
+                        **doc.metadata,
+                        "parent_id": doc.id,
+                        "chunk_id": i,
+                    },
+                )
+            )
+
     if not docs:
         print("\nNo valid input files were loaded.")
         print("Create files matching the sample paths above, then rerun:")
@@ -87,28 +119,36 @@ def run_manual_demo(question: str | None = None, sample_files: list[str] | None 
     provider = os.getenv(EMBEDDING_PROVIDER_ENV, "mock").strip().lower()
     if provider == "local":
         try:
-            embedder = LocalEmbedder(model_name=os.getenv("LOCAL_EMBEDDING_MODEL", LOCAL_EMBEDDING_MODEL))
+            embedder = LocalEmbedder(
+                model_name=os.getenv("LOCAL_EMBEDDING_MODEL", LOCAL_EMBEDDING_MODEL)
+            )
         except Exception:
             embedder = _mock_embed
     elif provider == "openai":
         try:
-            embedder = OpenAIEmbedder(model_name=os.getenv("OPENAI_EMBEDDING_MODEL", OPENAI_EMBEDDING_MODEL))
+            embedder = OpenAIEmbedder(
+                model_name=os.getenv("OPENAI_EMBEDDING_MODEL", OPENAI_EMBEDDING_MODEL)
+            )
         except Exception:
             embedder = _mock_embed
     else:
         embedder = _mock_embed
 
-    print(f"\nEmbedding backend: {getattr(embedder, '_backend_name', embedder.__class__.__name__)}")
+    print(
+        f"\nEmbedding backend: {getattr(embedder, '_backend_name', embedder.__class__.__name__)}"
+    )
 
     store = EmbeddingStore(collection_name="manual_test_store", embedding_fn=embedder)
-    store.add_documents(docs)
+    store.add_documents(chunked_docs)
 
     print(f"\nStored {store.get_collection_size()} documents in EmbeddingStore")
     print("\n=== EmbeddingStore Search Test ===")
     print(f"Query: {query}")
     search_results = store.search(query, top_k=3)
     for index, result in enumerate(search_results, start=1):
-        print(f"{index}. score={result['score']:.3f} source={result['metadata'].get('source')}")
+        print(
+            f"{index}. score={result['score']:.3f} source={result['metadata'].get('source')}"
+        )
         print(f"   content preview: {result['content'][:120].replace(chr(10), ' ')}...")
 
     print("\n=== KnowledgeBaseAgent Test ===")

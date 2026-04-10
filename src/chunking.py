@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import math
 import re
+from pathlib import Path
 
 
 class FixedSizeChunker:
@@ -48,7 +49,23 @@ class SentenceChunker:
 
     def chunk(self, text: str) -> list[str]:
         # TODO: split into sentences, group into chunks
-        raise NotImplementedError("Implement SentenceChunker.chunk")
+        # base case
+        if not text:
+            return []
+
+        # usual
+        delimiters_regex = r"\. |\! |\? |\.\n"
+        sentences: list[str] = re.split(delimiters_regex, text)
+
+        sentences = [s.strip() for s in sentences if s.strip()]  # remove empty strings
+
+        if not sentences:
+            return []
+
+        chunks: list[str] = []
+        for i in range(0, len(sentences), self.max_sentences_per_chunk):
+            chunks.append(" ".join(sentences[i : i + self.max_sentences_per_chunk]))
+        return chunks
 
 
 class RecursiveChunker:
@@ -61,17 +78,40 @@ class RecursiveChunker:
 
     DEFAULT_SEPARATORS = ["\n\n", "\n", ". ", " ", ""]
 
-    def __init__(self, separators: list[str] | None = None, chunk_size: int = 500) -> None:
-        self.separators = self.DEFAULT_SEPARATORS if separators is None else list(separators)
+    def __init__(
+        self, separators: list[str] | None = None, chunk_size: int = 500
+    ) -> None:
+        self.separators = (
+            self.DEFAULT_SEPARATORS if separators is None else list(separators)
+        )
         self.chunk_size = chunk_size
 
     def chunk(self, text: str) -> list[str]:
         # TODO: implement recursive splitting strategy
-        raise NotImplementedError("Implement RecursiveChunker.chunk")
+
+        return self._split(text, self.separators)
 
     def _split(self, current_text: str, remaining_separators: list[str]) -> list[str]:
         # TODO: recursive helper used by RecursiveChunker.chunk
-        raise NotImplementedError("Implement RecursiveChunker._split")
+
+        if len(current_text) <= self.chunk_size:
+            return [current_text]
+
+        if not remaining_separators:
+            return [current_text]
+
+        sep = remaining_separators[0]
+        remaining_separators = remaining_separators[1:]
+        chunks: list[str] = current_text.split(sep)
+
+        for c in chunks:
+            if len(c) <= self.chunk_size:
+                # print(f"Chunk : {c}")
+                continue
+            else:
+                chunks.remove(c)
+                chunks.extend(self._split(c, remaining_separators))
+        return chunks
 
 
 def _dot(a: list[float], b: list[float]) -> float:
@@ -87,7 +127,14 @@ def compute_similarity(vec_a: list[float], vec_b: list[float]) -> float:
     Returns 0.0 if either vector has zero magnitude.
     """
     # TODO: implement cosine similarity formula
-    raise NotImplementedError("Implement compute_similarity")
+    dot_product = _dot(vec_a, vec_b)
+    magnitude_a = sum(x * x for x in vec_a) ** 0.5
+    magnitude_b = sum(x * x for x in vec_b) ** 0.5
+    return (
+        dot_product / (magnitude_a * magnitude_b)
+        if magnitude_a > 0 and magnitude_b > 0
+        else 0.0
+    )
 
 
 class ChunkingStrategyComparator:
@@ -95,4 +142,42 @@ class ChunkingStrategyComparator:
 
     def compare(self, text: str, chunk_size: int = 200) -> dict:
         # TODO: call each chunker, compute stats, return comparison dict
-        raise NotImplementedError("Implement ChunkingStrategyComparator.compare")
+        strategies = {
+            "fixed_size": FixedSizeChunker(chunk_size=chunk_size),
+            "by_sentences": SentenceChunker(max_sentences_per_chunk=2),
+            "recursive": RecursiveChunker(
+                chunk_size=chunk_size,
+            ),
+        }
+
+        output = {}
+
+        for name, chunker in strategies.items():
+            chunks = chunker.chunk(text)
+            avg = sum(len(c) for c in chunks) / len(chunks) if chunks else 0
+
+            print(f"{name}: {len(chunks)} chunks, avg size: {avg}")
+
+            output[name] = {
+                "count": len(chunks),
+                "avg_length": avg,
+                "chunks": chunks,
+            }
+
+        return output
+
+
+def main():
+    text = Path("data_v2/tot_nghiep.md").read_text(encoding="utf-8")
+    print(text)
+
+    result = ChunkingStrategyComparator().compare(text, chunk_size=200)
+
+    for name, stats in result.items():
+        print("\n===", name, "===")
+        print("count:", stats["count"])
+        print("avg_length:", stats["avg_length"])
+
+
+if __name__ == "__main__":
+    main()
